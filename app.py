@@ -14,8 +14,8 @@ ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'}
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-this')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///blog.db')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'votre_clé_secrète_par_défaut')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -254,6 +254,12 @@ def edit_document(document_id):
     return render_template('edit_document.html', document=document)
 
 if __name__ == '__main__':
+    # Création des dossiers nécessaires
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Création de la base de données si elle n'existe pas
     with app.app_context():
         db.create_all()
+    
+    # Lancement du serveur en mode développement
     app.run(debug=True)
