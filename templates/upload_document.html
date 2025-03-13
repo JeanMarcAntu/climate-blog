@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="upload-section">
+    <h1 class="mb-4">Ajouter un document</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Titre du document</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="author" class="form-label">Auteur(s)</label>
+                    <input type="text" class="form-control" id="author" name="author">
+                    <div class="form-text">Nom de l'auteur ou des auteurs du document</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="year" class="form-label">Année de publication</label>
+                    <input type="number" class="form-control" id="year" name="year" 
+                           min="1900" max="2100" value="{{ current_year }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    <div class="form-text">Une brève description du contenu du document</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="tags" class="form-label">Tags</label>
+                    <input type="text" class="form-control" id="tags" name="tags">
+                    <div class="form-text">
+                        Séparez les tags par des virgules (ex: climat, rapport, entreprise)
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document" class="form-label">Fichier</label>
+                    <input type="file" class="form-control" id="document" name="document" required>
+                    <div class="form-text">
+                        Formats acceptés : PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Uploader le document
+                    </button>
+                    <a href="{{ url_for('documents') }}" class="btn btn-outline-secondary">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}

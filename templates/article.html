@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<article class="blog-post">
+    <h1 class="mb-4">{{ article.title }}</h1>
+    
+    <div class="text-muted mb-4">
+        Publié le {{ article.created_date.strftime('%d/%m/%Y à %H:%M') }}
+    </div>
+    
+    <div class="article-content">
+        {{ article.content | safe }}
+    </div>
+</article>
+
+<div class="mt-4">
+    <a href="{{ url_for('home') }}" class="btn btn-outline-success">← Retour aux articles</a>
+</div>
+{% endblock %}

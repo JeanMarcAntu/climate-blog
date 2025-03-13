@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Créer un Nouvel Article</h1>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="title" class="form-label">Titre</label>
+        <input type="text" class="form-control" id="title" name="title" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="content" class="form-label">Contenu</label>
+        <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Publier l'article</button>
+    <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">Annuler</a>
+</form>
+{% endblock %}

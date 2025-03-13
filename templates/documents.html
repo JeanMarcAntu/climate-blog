@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="documents-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Documents</h1>
+        <a href="{{ url_for('upload_document') }}" class="btn btn-success">
+            <i class="fas fa-upload"></i> Ajouter un document
+        </a>
+    </div>
+
+    {% if tags %}
+    <div class="mb-4">
+        <h5>Filtrer par tag :</h5>
+        <div class="tags-filter">
+            <a href="{{ url_for('documents') }}" 
+               class="btn btn-sm {% if not selected_tag %}btn-success{% else %}btn-outline-success{% endif %} me-2 mb-2">
+                Tous
+            </a>
+            {% for tag in tags %}
+            <a href="{{ url_for('documents', tag=tag.name) }}" 
+               class="btn btn-sm {% if selected_tag == tag.name %}btn-success{% else %}btn-outline-success{% endif %} me-2 mb-2">
+                {{ tag.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if documents %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-success">
+                    <tr>
+                        <th>Titre</th>
+                        <th>Auteur(s)</th>
+                        <th>Année</th>
+                        <th>Description</th>
+                        <th>Tags</th>
+                        <th>Date d'ajout</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                    <tr>
+                        <td>{{ document.title }}</td>
+                        <td>
+                            {% if document.author %}
+                                {{ document.author }}
+                            {% else %}
+                                <em>Non renseigné</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.year %}
+                                {{ document.year }}
+                            {% else %}
+                                <em>Non renseigné</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.description %}
+                                {{ document.description[:100] }}{% if document.description|length > 100 %}...{% endif %}
+                            {% else %}
+                                <em>Pas de description</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.tags %}
+                                {% for tag in document.tags %}
+                                    <a href="{{ url_for('documents', tag=tag.name) }}" 
+                                       class="badge bg-success text-decoration-none me-1">
+                                        {{ tag.name }}
+                                    </a>
+                                {% endfor %}
+                            {% else %}
+                                <em>Aucun tag</em>
+                            {% endif %}
+                        </td>
+                        <td>{{ document.upload_date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('download_document', document_id=document.id) }}" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-download"></i> Télécharger
+                                </a>
+                                <a href="{{ url_for('edit_document', document_id=document.id) }}" 
+                                   class="btn btn-sm btn-outline-primary ms-1">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Aucun document n'a encore été ajouté.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .tags-filter {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .badge {
+        font-size: 0.85em;
+    }
+</style>
+{% endblock %}

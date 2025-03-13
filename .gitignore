@@ -1,0 +1,18 @@
+# Base de données
+*.db
+
+# Environnement Python
+venv/
+__pycache__/
+*.pyc
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Dossier des documents uploadés
+uploads/
+
+# Fichiers de l'environnement
+.env
+*.env
