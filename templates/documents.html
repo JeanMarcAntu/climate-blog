@@ -89,6 +89,14 @@
                                    class="btn btn-sm btn-outline-primary ms-1">
                                     <i class="fas fa-edit"></i> Modifier
                                 </a>
+                                <form action="{{ url_for('delete_document', document_id=document.id) }}" 
+                                      method="POST" 
+                                      class="d-inline ms-1" 
+                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce document ?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i> Supprimer
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>

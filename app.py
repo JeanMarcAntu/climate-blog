@@ -263,6 +263,36 @@ def edit_document(document_id):
     
     return render_template('edit_document.html', document=document)
 
+# Route pour supprimer un article
+@app.route('/admin/delete_article/<int:article_id>', methods=['POST'])
+def delete_article(article_id):
+    article = Article.query.get_or_404(article_id)
+    try:
+        db.session.delete(article)
+        db.session.commit()
+        flash('Article supprimé avec succès !', 'success')
+    except Exception as e:
+        flash(f'Erreur lors de la suppression : {str(e)}', 'error')
+    return redirect(url_for('home'))
+
+# Route pour supprimer un document
+@app.route('/admin/delete_document/<int:document_id>', methods=['POST'])
+def delete_document(document_id):
+    document = Document.query.get_or_404(document_id)
+    try:
+        # Supprimer le fichier physique
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Supprimer l'entrée dans la base de données
+        db.session.delete(document)
+        db.session.commit()
+        flash('Document supprimé avec succès !', 'success')
+    except Exception as e:
+        flash(f'Erreur lors de la suppression : {str(e)}', 'error')
+    return redirect(url_for('documents'))
+
 if __name__ == '__main__':
     # Création des dossiers nécessaires
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
