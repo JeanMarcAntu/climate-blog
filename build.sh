@@ -23,5 +23,8 @@ with app.app_context():
         print("Base de données déjà initialisée - Conservation des données existantes")
 END
 
+# Création du compte administrateur
+python init_admin.py
+
 # Message de confirmation
 echo "Configuration terminée ! Le blog est prêt à être utilisé."
