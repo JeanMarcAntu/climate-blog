@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Derniers Articles</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-4">Derniers Articles</h1>
+    <a href="{{ url_for('new_article') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Nouvel Article
+    </a>
+</div>
 
 <div class="row">
     {% for article in articles %}

@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog Climat & Entreprises</title>
+    <title>Les Cahiers de l'Adaptation</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-success">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">Blog Climat & Entreprises</a>
+            <a class="navbar-brand" href="{{ url_for('home') }}">Les Cahiers de l'Adaptation</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">Accueil</a>
+                        <a class="nav-link" href="{{ url_for('home') }}">Articles</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('documents') }}">Documents</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_article') }}">Nouvel Article</a>
                     </li>
                 </ul>
                 <form class="d-flex" action="{{ url_for('search') }}" method="get">
@@ -53,7 +50,7 @@
 
     <footer class="footer mt-5 py-3 bg-light">
         <div class="container text-center">
-            <span class="text-muted"> 2025 Blog Climat & Entreprises</span>
+            <span class="text-muted"> 2025 Les Cahiers de l'Adaptation</span>
         </div>
     </footer>
 
