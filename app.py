@@ -36,12 +36,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Table d'association pour les tags des documents
-document_tags = db.Table('document_tags',
-    db.Column('document_id', db.Integer, db.ForeignKey('document.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
-)
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
