@@ -30,13 +30,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Initialisation de la base de données
+# Initialisation de la base de données et du login manager
 db.init_app(app)
-
-# Création des tables au démarrage de l'application
-with app.app_context():
-    db.create_all()
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -278,6 +273,11 @@ def add_no_cache_headers(response):
 if __name__ == '__main__':
     # Création des dossiers nécessaires
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Création des tables de la base de données
+    with app.app_context():
+        db.create_all()
+        print("Base de données initialisée avec succès")
     
     # Lancement du serveur en mode développement
     app.run(debug=True)
