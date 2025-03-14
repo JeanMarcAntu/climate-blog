@@ -190,38 +190,6 @@ def delete_article(article_id):
     flash('Article supprimé avec succès!', 'success')
     return redirect(url_for('home'))
 
-# Route pour la recherche
-@app.route('/search')
-def search():
-    query = request.args.get('q', '')
-    search_type = request.args.get('type', 'all')  # 'all', 'articles', ou 'documents'
-    
-    if query:
-        if search_type == 'articles' or search_type == 'all':
-            articles = Article.query.filter(
-                (Article.title.ilike(f'%{query}%')) |
-                (Article.content.ilike(f'%{query}%'))
-            ).order_by(Article.created_date.desc()).all()
-        else:
-            articles = []
-            
-        if search_type == 'documents' or search_type == 'all':
-            documents = Document.query.filter(
-                (Document.title.ilike(f'%{query}%')) |
-                (Document.description.ilike(f'%{query}%'))
-            ).order_by(Document.upload_date.desc()).all()
-        else:
-            documents = []
-    else:
-        articles = []
-        documents = []
-        
-    return render_template('search.html', 
-                         articles=articles, 
-                         documents=documents, 
-                         query=query, 
-                         search_type=search_type)
-
 # Route pour la page des documents
 @app.route('/documents')
 def documents():
