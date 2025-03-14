@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from dotenv import load_dotenv
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
+from models import db, Tag, Article, Document, User
 
 # Chargement des variables d'environnement
 load_dotenv()
@@ -32,7 +31,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 # Initialisation de la base de données
-db = SQLAlchemy(app)
+db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -43,52 +42,6 @@ document_tags = db.Table('document_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
 
-# Modèle pour les tags
-class Tag(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-    
-    def __repr__(self):
-        return f'<Tag {self.name}>'
-
-# Modèle pour les articles
-class Article(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    created_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<Article {self.title}>'
-
-# Modèle pour les documents
-class Document(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(200), nullable=False)
-    original_filename = db.Column(db.String(200), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    author = db.Column(db.String(200), nullable=True)
-    year = db.Column(db.Integer, nullable=True)
-    description = db.Column(db.Text)
-    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
-    tags = db.relationship('Tag', secondary=document_tags, lazy='subquery',
-        backref=db.backref('documents', lazy=True))
-    
-    def __repr__(self):
-        return f'<Document {self.title}>'
-
-# Modèle pour les utilisateurs
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -97,7 +50,7 @@ def load_user(user_id):
 def get_or_create_tags(tag_names):
     tags = []
     for name in tag_names:
-        name = name.strip().lower()
+        name = name.strip()
         if name:
             tag = Tag.query.filter_by(name=name).first()
             if not tag:
