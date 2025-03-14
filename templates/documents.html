@@ -4,9 +4,11 @@
 <div class="documents-section">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Documents</h1>
+        {% if current_user.is_authenticated %}
         <a href="{{ url_for('upload_document') }}" class="btn btn-success">
             <i class="fas fa-upload"></i> Ajouter un document
         </a>
+        {% endif %}
     </div>
 
     {% if tags %}
@@ -85,6 +87,7 @@
                                    class="btn btn-sm btn-outline-success">
                                     <i class="fas fa-download"></i> Télécharger
                                 </a>
+                                {% if current_user.is_authenticated %}
                                 <a href="{{ url_for('edit_document', document_id=document.id) }}" 
                                    class="btn btn-sm btn-outline-primary ms-1">
                                     <i class="fas fa-edit"></i> Modifier
@@ -97,6 +100,7 @@
                                         <i class="fas fa-trash"></i> Supprimer
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

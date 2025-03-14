@@ -172,6 +172,29 @@ def new_article():
     
     return render_template('new_article.html')
 
+# Route pour la modification d'un article
+@app.route('/admin/edit/<int:article_id>', methods=['GET', 'POST'])
+@login_required
+def edit_article(article_id):
+    article = Article.query.get_or_404(article_id)
+    if request.method == 'POST':
+        article.title = request.form['title']
+        article.content = request.form['content']
+        db.session.commit()
+        flash('Article modifié avec succès!', 'success')
+        return redirect(url_for('article', article_id=article.id))
+    return render_template('edit_article.html', article=article)
+
+# Route pour supprimer un article
+@app.route('/admin/delete/article/<int:article_id>')
+@login_required
+def delete_article(article_id):
+    article = Article.query.get_or_404(article_id)
+    db.session.delete(article)
+    db.session.commit()
+    flash('Article supprimé avec succès!', 'success')
+    return redirect(url_for('home'))
+
 # Route pour la recherche
 @app.route('/search')
 def search():
@@ -238,114 +261,96 @@ def download_document(document_id):
                              download_name=document.original_filename)
 
 # Route pour uploader un document
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route('/admin/upload', methods=['GET', 'POST'])
 @login_required
 def upload_document():
     if request.method == 'POST':
-        if 'document' not in request.files:
+        if 'file' not in request.files:
             flash('Aucun fichier sélectionné', 'error')
             return redirect(request.url)
-            
-        file = request.files['document']
+        
+        file = request.files['file']
         if file.filename == '':
             flash('Aucun fichier sélectionné', 'error')
             return redirect(request.url)
-            
+        
         if file and allowed_file(file.filename):
-            try:
-                filename = secure_filename(file.filename)
-                # Génération d'un nom unique pour le fichier
-                unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-                
-                # Récupération des données du formulaire
-                title = request.form.get('title', filename)
-                author = request.form.get('author')
-                year = request.form.get('year')
-                description = request.form.get('description')
-                tags = request.form.get('tags', '').split(',')
-                
-                # Sauvegarde du fichier
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-                
-                # Création du document dans la base de données
-                document = Document(
-                    filename=unique_filename,
-                    original_filename=filename,
-                    title=title,
-                    author=author,
-                    year=year if year else None,
-                    description=description
-                )
-                
-                # Gestion des tags
-                document.tags = get_or_create_tags(tags)
-                
-                db.session.add(document)
-                db.session.commit()
-                
-                flash('Document uploadé avec succès!', 'success')
-                return redirect(url_for('documents'))
-            except Exception as e:
-                flash(f'Erreur lors de l\'upload : {str(e)}', 'error')
-                return redirect(request.url)
-        else:
-            flash('Type de fichier non autorisé', 'error')
-            return redirect(request.url)
+            # Sécurisation du nom de fichier
+            filename = secure_filename(file.filename)
+            # Ajout d'un timestamp pour éviter les doublons
+            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
             
-    return render_template('upload.html')
+            # Sauvegarde du fichier
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
+            # Création du document dans la base de données
+            title = request.form.get('title', filename)
+            author = request.form.get('author', '')
+            year = request.form.get('year', None)
+            description = request.form.get('description', '')
+            
+            # Gestion des tags
+            tag_names = request.form.get('tags', '').split(',')
+            tags = get_or_create_tags(tag_names)
+            
+            document = Document(
+                filename=filename,
+                original_filename=file.filename,
+                title=title,
+                author=author,
+                year=year if year and year.isdigit() else None,
+                description=description,
+                tags=tags
+            )
+            
+            db.session.add(document)
+            db.session.commit()
+            
+            flash('Document uploadé avec succès!', 'success')
+            return redirect(url_for('documents'))
+            
+        flash('Type de fichier non autorisé', 'error')
+        return redirect(request.url)
+        
+    return render_template('upload_document.html')
 
 # Route pour éditer un document
-@app.route('/admin/edit_document/<int:document_id>', methods=['GET', 'POST'])
+@app.route('/admin/edit/document/<int:document_id>', methods=['GET', 'POST'])
 @login_required
 def edit_document(document_id):
     document = Document.query.get_or_404(document_id)
-    
     if request.method == 'POST':
-        document.title = request.form.get('title')
-        document.author = request.form.get('author')
-        document.year = request.form.get('year') if request.form.get('year') else None
-        document.description = request.form.get('description')
+        document.title = request.form.get('title', document.title)
+        document.author = request.form.get('author', document.author)
+        document.year = request.form.get('year', document.year)
+        document.description = request.form.get('description', document.description)
         
         # Mise à jour des tags
-        tags = request.form.get('tags', '').split(',')
-        document.tags = get_or_create_tags(tags)
+        tag_names = request.form.get('tags', '').split(',')
+        document.tags = get_or_create_tags(tag_names)
         
         db.session.commit()
         flash('Document modifié avec succès!', 'success')
         return redirect(url_for('documents'))
-    
+        
     return render_template('edit_document.html', document=document)
 
-# Route pour supprimer un article
-@app.route('/admin/delete_article/<int:article_id>', methods=['POST'])
-@login_required
-def delete_article(article_id):
-    article = Article.query.get_or_404(article_id)
-    try:
-        db.session.delete(article)
-        db.session.commit()
-        flash('Article supprimé avec succès !', 'success')
-    except Exception as e:
-        flash(f'Erreur lors de la suppression : {str(e)}', 'error')
-    return redirect(url_for('home'))
-
 # Route pour supprimer un document
-@app.route('/admin/delete_document/<int:document_id>', methods=['POST'])
+@app.route('/admin/delete/document/<int:document_id>')
 @login_required
 def delete_document(document_id):
     document = Document.query.get_or_404(document_id)
-    try:
-        # Supprimer le fichier physique
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        
-        # Supprimer l'entrée dans la base de données
-        db.session.delete(document)
-        db.session.commit()
-        flash('Document supprimé avec succès !', 'success')
-    except Exception as e:
-        flash(f'Erreur lors de la suppression : {str(e)}', 'error')
+    
+    # Suppression du fichier physique
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    
+    # Suppression de l'entrée dans la base de données
+    db.session.delete(document)
+    db.session.commit()
+    
+    flash('Document supprimé avec succès!', 'success')
     return redirect(url_for('documents'))
 
 if __name__ == '__main__':
