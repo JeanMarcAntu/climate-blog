@@ -10,8 +10,8 @@ pip install -r requirements.txt
 
 # Initialisation de la base de données uniquement si nécessaire
 python << END
-from app import app, db
-from app.models import Article, User, Document, Tag
+from app import app
+from models import db, User
 
 with app.app_context():
     # On s'assure que les tables existent
@@ -31,5 +31,5 @@ with app.app_context():
         print("Le compte administrateur existe déjà.")
 END
 
-# Message de confirmation
-echo "Configuration terminée ! Le blog est prêt à être utilisé."
+# Lancement de l'application avec Gunicorn
+exec gunicorn --bind :10000 wsgi:app
