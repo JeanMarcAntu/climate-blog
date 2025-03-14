@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 # Chargement des variables d'environnement
@@ -35,6 +37,9 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 # Initialisation de la base de données
 db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 # Table d'association pour les tags des documents
 document_tags = db.Table('document_tags',
@@ -76,6 +81,22 @@ class Document(db.Model):
     def __repr__(self):
         return f'<Document {self.title}>'
 
+# Modèle pour les utilisateurs
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 # Fonction utilitaire pour gérer les tags
 def get_or_create_tags(tag_names):
     tags = []
@@ -104,8 +125,38 @@ def article(article_id):
     article = Article.query.get_or_404(article_id)
     return render_template('article.html', article=article)
 
+# Route pour la page de connexion
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            flash('Connexion réussie !', 'success')
+            next_page = request.args.get('next')
+            return redirect(next_page if next_page else url_for('home'))
+        else:
+            flash('Nom d\'utilisateur ou mot de passe incorrect', 'error')
+    
+    return render_template('login.html')
+
+# Route pour la déconnexion
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Vous avez été déconnecté', 'info')
+    return redirect(url_for('home'))
+
 # Route pour créer un nouvel article
 @app.route('/admin/new', methods=['GET', 'POST'])
+@login_required
 def new_article():
     if request.method == 'POST':
         title = request.form['title']
@@ -187,6 +238,7 @@ def download_document(document_id):
 
 # Route pour uploader un document
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload_document():
     if request.method == 'POST':
         if 'document' not in request.files:
@@ -200,28 +252,33 @@ def upload_document():
             
         if file and allowed_file(file.filename):
             try:
-                # Sécurisation du nom de fichier
                 filename = secure_filename(file.filename)
-                # Ajout d'un timestamp pour éviter les doublons
-                filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                # Génération d'un nom unique pour le fichier
+                unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                
+                # Récupération des données du formulaire
+                title = request.form.get('title', filename)
+                author = request.form.get('author')
+                year = request.form.get('year')
+                description = request.form.get('description')
+                tags = request.form.get('tags', '').split(',')
                 
                 # Sauvegarde du fichier
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
                 
-                # Traitement des tags
-                tag_names = [t.strip() for t in request.form.get('tags', '').split(',')]
-                tags = get_or_create_tags(tag_names)
-                
-                # Création de l'entrée dans la base de données
+                # Création du document dans la base de données
                 document = Document(
-                    filename=filename,
-                    original_filename=file.filename,
-                    title=request.form['title'],
-                    author=request.form.get('author'),
-                    year=int(request.form.get('year')) if request.form.get('year') else None,
-                    description=request.form.get('description'),
-                    tags=tags
+                    filename=unique_filename,
+                    original_filename=filename,
+                    title=title,
+                    author=author,
+                    year=year if year else None,
+                    description=description
                 )
+                
+                # Gestion des tags
+                document.tags = get_or_create_tags(tags)
+                
                 db.session.add(document)
                 db.session.commit()
                 
@@ -230,41 +287,37 @@ def upload_document():
             except Exception as e:
                 flash(f'Erreur lors de l\'upload : {str(e)}', 'error')
                 return redirect(request.url)
-                
-        flash('Type de fichier non autorisé', 'error')
-        return redirect(request.url)
-        
-    return render_template('upload_document.html', current_year=datetime.utcnow().year)
+        else:
+            flash('Type de fichier non autorisé', 'error')
+            return redirect(request.url)
+            
+    return render_template('upload.html')
 
 # Route pour éditer un document
-@app.route('/edit_document/<int:document_id>', methods=['GET', 'POST'])
+@app.route('/admin/edit_document/<int:document_id>', methods=['GET', 'POST'])
+@login_required
 def edit_document(document_id):
     document = Document.query.get_or_404(document_id)
     
     if request.method == 'POST':
-        try:
-            document.title = request.form['title']
-            document.author = request.form.get('author')
-            year = request.form.get('year', '')
-            document.year = int(year) if year.strip() else None
-            document.description = request.form.get('description')
-            
-            # Mise à jour des tags
-            tag_names = [t.strip() for t in request.form.get('tags', '').split(',')]
-            document.tags = get_or_create_tags(tag_names)
-            
-            db.session.commit()
-            flash('Document modifié avec succès!', 'success')
-            return redirect(url_for('documents'))
-            
-        except Exception as e:
-            flash(f'Erreur lors de la modification : {str(e)}', 'error')
-            return redirect(url_for('documents'))
+        document.title = request.form.get('title')
+        document.author = request.form.get('author')
+        document.year = request.form.get('year') if request.form.get('year') else None
+        document.description = request.form.get('description')
+        
+        # Mise à jour des tags
+        tags = request.form.get('tags', '').split(',')
+        document.tags = get_or_create_tags(tags)
+        
+        db.session.commit()
+        flash('Document modifié avec succès!', 'success')
+        return redirect(url_for('documents'))
     
     return render_template('edit_document.html', document=document)
 
 # Route pour supprimer un article
 @app.route('/admin/delete_article/<int:article_id>', methods=['POST'])
+@login_required
 def delete_article(article_id):
     article = Article.query.get_or_404(article_id)
     try:
@@ -277,6 +330,7 @@ def delete_article(article_id):
 
 # Route pour supprimer un document
 @app.route('/admin/delete_document/<int:document_id>', methods=['POST'])
+@login_required
 def delete_document(document_id):
     document = Document.query.get_or_404(document_id)
     try:
