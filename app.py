@@ -186,7 +186,7 @@ def edit_article(article_id):
     return render_template('edit_article.html', article=article)
 
 # Route pour supprimer un article
-@app.route('/admin/delete/article/<int:article_id>')
+@app.route('/admin/delete/article/<int:article_id>', methods=['GET', 'POST'])
 @login_required
 def delete_article(article_id):
     article = Article.query.get_or_404(article_id)
