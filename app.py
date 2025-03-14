@@ -27,7 +27,8 @@ else:
     # En local, on utilise SQLite
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'votre_clé_secrète_par_défaut')
+# Définition d'une clé secrète stable pour le développement
+app.config['SECRET_KEY'] = 'dev_secret_key_123'  # Ne pas utiliser en production
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
