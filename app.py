@@ -271,13 +271,5 @@ def add_no_cache_headers(response):
     return response
 
 if __name__ == '__main__':
-    # Création des dossiers nécessaires
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
-    # Création des tables de la base de données
-    with app.app_context():
-        db.create_all()
-        print("Base de données initialisée avec succès")
-    
-    # Lancement du serveur en mode développement
+    # Pour le développement local uniquement
     app.run(debug=True)
