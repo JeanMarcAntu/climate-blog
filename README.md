@@ -52,6 +52,7 @@ L'application sera accessible à l'adresse : http://127.0.0.1:5000
 ```
 climate_blog/
 ├── app.py              # Application principale
+├── models.py           # Modèles de données (Article, Document, Tag, User)
 ├── requirements.txt    # Dépendances Python
 ├── uploads/           # Dossier des documents uploadés
 └── templates/         # Templates HTML
