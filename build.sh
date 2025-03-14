@@ -8,13 +8,19 @@ mkdir -p uploads
 # Installation des dépendances Python
 pip install -r requirements.txt
 
-# Initialisation de la base de données
+# Initialisation de la base de données uniquement si nécessaire
 python << END
 from app import app, db
+from app.models import Article  # Importation du modèle Article
+
 with app.app_context():
-    print("Création des tables dans la base de données...")
-    db.create_all()
-    print("Base de données initialisée avec succès !")
+    # Vérifie si les tables existent déjà
+    if not Article.query.first():
+        print("Aucun article trouvé - Création des tables dans la base de données...")
+        db.create_all()
+        print("Base de données initialisée avec succès !")
+    else:
+        print("Base de données déjà initialisée - Conservation des données existantes")
 END
 
 # Message de confirmation
