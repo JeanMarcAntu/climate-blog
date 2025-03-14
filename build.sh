@@ -32,4 +32,8 @@ with app.app_context():
 END
 
 # Lancement de l'application avec Gunicorn
-exec gunicorn --bind :10000 wsgi:app
+# --workers : nombre de processus (2 x nb de cœurs + 1)
+# --timeout : temps maximum pour traiter une requête
+# --access-logfile : logs des accès
+# --error-logfile : logs des erreurs
+exec gunicorn --workers=4 --timeout=60 --access-logfile=- --error-logfile=- --bind=:10000 wsgi:app
