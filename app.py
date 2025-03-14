@@ -14,7 +14,17 @@ ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'}
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///blog.db')
+
+# Configuration de la base de données
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    # Render ajoute postgres://, mais SQLAlchemy attend postgresql://
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # En local, on utilise SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'votre_clé_secrète_par_défaut')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
