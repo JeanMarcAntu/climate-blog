@@ -20,15 +20,10 @@ app = Flask(__name__)
 # Configuration de la base de données
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith('postgres://'):
-    # Render ajoute postgres://, mais SQLAlchemy attend postgresql://
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-else:
-    # En local, on utilise SQLite
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 
-# Définition d'une clé secrète stable pour le développement
-app.config['SECRET_KEY'] = 'dev_secret_key_123'  # Ne pas utiliser en production
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///blog.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key_123')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
