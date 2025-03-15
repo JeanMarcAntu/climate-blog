@@ -88,39 +88,58 @@ def article(article_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
+        app.logger.info("Début de la route login")
+        
+        # Vérification de l'authentification
         if current_user.is_authenticated:
             app.logger.info("Utilisateur déjà connecté, redirection vers la page d'accueil")
             return redirect(url_for('home'))
-            
+        
+        # Traitement du formulaire
         if request.method == 'POST':
             username = request.form.get('username')
             password = request.form.get('password')
             app.logger.info(f"Tentative de connexion pour l'utilisateur : {username}")
             
             try:
+                # Recherche de l'utilisateur
                 user = User.query.filter_by(username=username).first()
                 app.logger.info(f"Recherche de l'utilisateur : {'trouvé' if user else 'non trouvé'}")
                 
                 if user and user.check_password(password):
-                    login_user(user)
-                    app.logger.info(f"Connexion réussie pour l'utilisateur : {username}")
-                    flash('Connexion réussie !', 'success')
-                    next_page = request.args.get('next')
-                    return redirect(next_page if next_page else url_for('home'))
+                    try:
+                        # Tentative de connexion
+                        login_user(user)
+                        app.logger.info(f"Connexion réussie pour l'utilisateur : {username}")
+                        flash('Connexion réussie !', 'success')
+                        next_page = request.args.get('next')
+                        return redirect(next_page if next_page else url_for('home'))
+                    except Exception as login_error:
+                        app.logger.error(f"Erreur lors du login_user : {str(login_error)}")
+                        app.logger.error(f"Type d'erreur : {type(login_error).__name__}")
+                        raise
                 else:
                     app.logger.warning(f"Échec de connexion pour l'utilisateur : {username}")
                     flash('Nom d\'utilisateur ou mot de passe incorrect', 'error')
             except Exception as db_error:
                 app.logger.error(f"Erreur lors de la requête base de données : {str(db_error)}")
+                app.logger.error(f"Type d'erreur : {type(db_error).__name__}")
                 raise
         
+        # Affichage du formulaire
         app.logger.info("Affichage du formulaire de connexion")
-        return render_template('login.html')
+        try:
+            return render_template('login.html')
+        except Exception as template_error:
+            app.logger.error(f"Erreur lors du rendu du template : {str(template_error)}")
+            app.logger.error(f"Type d'erreur : {type(template_error).__name__}")
+            raise
+            
     except Exception as e:
-        app.logger.error(f"Erreur lors de la connexion : {str(e)}")
+        app.logger.error(f"Erreur générale lors de la connexion : {str(e)}")
         app.logger.error(f"Type d'erreur : {type(e).__name__}")
         import traceback
-        app.logger.error(f"Traceback : {traceback.format_exc()}")
+        app.logger.error(f"Traceback complet : {traceback.format_exc()}")
         raise
 
 # Route pour la déconnexion
