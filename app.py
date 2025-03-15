@@ -18,24 +18,29 @@ ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'}
 app = Flask(__name__)
 
 # Configuration de la base de données
-database_url = os.environ.get('DATABASE_URL')
-if database_url:
-    # Conversion de postgres:// en postgresql:// si nécessaire
-    if database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    
-    # Parse l'URL pour vérifier si c'est une URL PostgreSQL
-    parsed_url = urlparse(database_url)
-    if parsed_url.scheme in ['postgresql', 'postgres']:
-        # Ajoute les paramètres SSL pour Render
-        if '?' in database_url:
-            database_url += '&sslmode=require'
-        else:
-            database_url += '?sslmode=require'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///blog.db')
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///blog.db'
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key_123')
+# Configuration des options de connexion PostgreSQL
+if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+    connect_args = {
+        'connect_timeout': 10,
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 10,
+        'keepalives_count': 5,
+        'sslmode': 'require'
+    }
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'connect_args': connect_args,
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_timeout': 20
+    }
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key_123')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -299,7 +304,7 @@ def edit_document(document_id):
     return render_template('edit_document.html', document=document)
 
 # Route pour supprimer un document
-@app.route('/admin/delete/document/<int:document_id>')
+@app.route('/admin/delete/document/<int:document_id>', methods=['GET', 'POST'])
 @login_required
 def delete_document(document_id):
     document = Document.query.get_or_404(document_id)
