@@ -21,12 +21,57 @@ python << END
 from app import app, db
 from models import Document, User, Article, Tag
 import os
+import json
+from datetime import datetime
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
 print("Démarrage de la migration...")
 
+def serialize_datetime(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    return obj
+
 with app.app_context():
+    # Sauvegarde des données existantes
+    print("Sauvegarde des données existantes...")
+    data = {
+        'documents': [],
+        'articles': [],
+        'tags': []
+    }
+    
+    # Sauvegarde des tags
+    for tag in Tag.query.all():
+        data['tags'].append({
+            'id': tag.id,
+            'name': tag.name
+        })
+    
+    # Sauvegarde des documents
+    for doc in Document.query.all():
+        data['documents'].append({
+            'id': doc.id,
+            'filename': doc.filename,
+            'original_filename': doc.original_filename,
+            'title': doc.title,
+            'author': doc.author,
+            'year': doc.year,
+            'description': doc.description,
+            'upload_date': doc.upload_date,
+            'tag_names': [tag.name for tag in doc.tags]
+        })
+    
+    # Sauvegarde des articles
+    for article in Article.query.all():
+        data['articles'].append({
+            'id': article.id,
+            'title': article.title,
+            'content': article.content,
+            'created_date': article.created_date
+        })
+    
     # Vérification de l'existence des tables
     inspector = inspect(db.engine)
     tables = inspector.get_table_names()
@@ -45,29 +90,68 @@ with app.app_context():
                 conn.execute(sa.text('ALTER TABLE document ADD COLUMN file_type VARCHAR(50)'))
             conn.commit()
     
+    # Restauration des données
+    print("Restauration des données...")
+    
+    # Restauration des tags
+    for tag_data in data['tags']:
+        if not Tag.query.get(tag_data['id']):
+            tag = Tag(name=tag_data['name'])
+            db.session.add(tag)
+    db.session.commit()
+    
+    # Restauration des articles
+    for article_data in data['articles']:
+        if not Article.query.get(article_data['id']):
+            article = Article(
+                title=article_data['title'],
+                content=article_data['content'],
+                created_date=datetime.fromisoformat(article_data['created_date'])
+            )
+            db.session.add(article)
+    db.session.commit()
+    
+    # Restauration des documents
+    for doc_data in data['documents']:
+        if not Document.query.get(doc_data['id']):
+            # Récupération des tags
+            tags = []
+            for tag_name in doc_data['tag_names']:
+                tag = Tag.query.filter_by(name=tag_name).first()
+                if tag:
+                    tags.append(tag)
+            
+            # Création du document
+            doc = Document(
+                filename=doc_data['filename'],
+                original_filename=doc_data['original_filename'],
+                title=doc_data['title'],
+                author=doc_data['author'],
+                year=doc_data['year'],
+                description=doc_data['description'],
+                upload_date=datetime.fromisoformat(doc_data['upload_date']),
+                tags=tags
+            )
+            
+            # Migration du fichier
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc_data['filename'])
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'rb') as f:
+                        doc.file_content = f.read()
+                        doc.file_type = 'application/pdf'  # Par défaut pour les anciens fichiers
+                        print(f"Migration réussie : {doc.filename}")
+                except Exception as e:
+                    print(f"Erreur lors de la migration de {doc.filename}: {str(e)}")
+            
+            db.session.add(doc)
+    
     # Vérification/création du compte admin
     if not User.query.filter_by(username='JMA').first():
         print("Création du compte administrateur...")
         admin = User(username='JMA')
         admin.set_password('ChoniqueYouche88!')
         db.session.add(admin)
-        db.session.commit()
-        print("Compte administrateur créé !")
-    
-    # Migration des fichiers existants
-    print("Migration des fichiers...")
-    documents = Document.query.all()
-    for document in documents:
-        if document.file_content is None:
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, 'rb') as f:
-                        document.file_content = f.read()
-                        document.file_type = 'application/pdf'  # Par défaut pour les anciens fichiers
-                        print(f"Migration réussie : {document.filename}")
-                except Exception as e:
-                    print(f"Erreur lors de la migration de {document.filename}: {str(e)}")
     
     try:
         db.session.commit()
