@@ -12,6 +12,10 @@ echo "Dossier uploads vérifié"
 pip install -r requirements.txt
 echo "Dépendances installées"
 
+# Création du dossier d'upload
+mkdir -p /opt/render/project/src/uploads
+chmod 777 /opt/render/project/src/uploads
+
 # Initialisation de la base de données uniquement si nécessaire
 python << END
 from app import app, db
@@ -59,9 +63,5 @@ with app.app_context():
         print(f"Message d'erreur : {str(e)}")
         raise
 END
-
-# Création du dossier d'upload
-mkdir -p /opt/render/project/src/uploads
-chmod 777 /opt/render/project/src/uploads
 
 echo "Build terminé avec succès !"

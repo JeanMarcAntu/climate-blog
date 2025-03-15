@@ -228,11 +228,34 @@ def documents():
 # Route pour télécharger un document
 @app.route('/download/<int:document_id>')
 def download_document(document_id):
-    document = Document.query.get_or_404(document_id)
-    return send_from_directory(app.config['UPLOAD_FOLDER'],
-                             document.filename,
-                             as_attachment=True,
-                             download_name=document.original_filename)
+    try:
+        app.logger.info(f"Tentative de téléchargement du document {document_id}")
+        document = Document.query.get_or_404(document_id)
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        app.logger.info(f"Chemin du fichier : {file_path}")
+        
+        if not os.path.exists(file_path):
+            app.logger.error(f"Fichier non trouvé : {file_path}")
+            flash("Le fichier n'existe pas sur le serveur.", 'error')
+            return redirect(url_for('documents'))
+            
+        try:
+            return send_from_directory(
+                app.config['UPLOAD_FOLDER'],
+                document.filename,
+                as_attachment=True,
+                download_name=document.original_filename
+            )
+        except Exception as e:
+            app.logger.error(f"Erreur lors de l'envoi du fichier : {str(e)}")
+            flash("Erreur lors du téléchargement du fichier.", 'error')
+            return redirect(url_for('documents'))
+            
+    except Exception as e:
+        app.logger.error(f"Erreur lors du téléchargement : {str(e)}")
+        flash("Une erreur s'est produite lors du téléchargement.", 'error')
+        return redirect(url_for('documents'))
 
 # Route pour uploader un document
 @app.route('/admin/upload', methods=['GET', 'POST'])
