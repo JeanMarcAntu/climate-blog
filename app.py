@@ -228,11 +228,11 @@ def download_document(document_id):
 @login_required
 def upload_document():
     if request.method == 'POST':
-        if 'file' not in request.files:
+        if 'document' not in request.files:
             flash('Aucun fichier sélectionné', 'error')
             return redirect(request.url)
         
-        file = request.files['file']
+        file = request.files['document']
         if file.filename == '':
             flash('Aucun fichier sélectionné', 'error')
             return redirect(request.url)
