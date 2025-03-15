@@ -77,6 +77,34 @@ def get_or_create_tags(tag_names):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Fonction pour migrer les fichiers
+def migrate_files():
+    try:
+        # Récupérer tous les documents
+        documents = Document.query.all()
+        
+        # Pour chaque document
+        for document in documents:
+            old_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', document.filename)
+            new_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+            
+            # Si le fichier existe dans l'ancien dossier et pas dans le nouveau
+            if os.path.exists(old_path) and not os.path.exists(new_path):
+                try:
+                    # Copier le fichier
+                    os.makedirs(os.path.dirname(new_path), exist_ok=True)
+                    with open(old_path, 'rb') as src, open(new_path, 'wb') as dst:
+                        dst.write(src.read())
+                    app.logger.info(f"Fichier migré avec succès : {document.filename}")
+                except Exception as e:
+                    app.logger.error(f"Erreur lors de la migration du fichier {document.filename}: {str(e)}")
+    except Exception as e:
+        app.logger.error(f"Erreur lors de la migration des fichiers : {str(e)}")
+
+# Appeler la migration au démarrage
+with app.app_context():
+    migrate_files()
+
 # Route pour la page d'accueil
 @app.route('/')
 def home():
