@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response, abort
 import datetime
 import os
 from dotenv import load_dotenv
@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from models import db, Tag, Article, Document, User
 from urllib.parse import urlparse
 import logging
+from flask_migrate import Migrate
 
 # Chargement des variables d'environnement
 load_dotenv()
@@ -14,6 +15,46 @@ load_dotenv()
 # Configuration des uploads
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'}
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'svg'}
+THUMBNAIL_SIZE = 40  # Hauteur en pixels (même que le bouton)
+
+def allowed_file(filename, allowed_extensions):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def resize_image(image_path, output_path):
+    """Redimensionne une image pour qu'elle soit carrée avec la hauteur spécifiée."""
+    try:
+        from PIL import Image
+        
+        # Ouvrir l'image
+        with Image.open(image_path) as img:
+            # Si c'est un SVG, on ne fait pas de redimensionnement
+            if image_path.lower().endswith('.svg'):
+                img.save(output_path)
+                return True
+                
+            # Calculer les nouvelles dimensions
+            ratio = THUMBNAIL_SIZE / float(img.size[1])
+            new_width = int(float(img.size[0]) * ratio)
+            
+            # Redimensionner l'image en conservant les proportions
+            img = img.resize((new_width, THUMBNAIL_SIZE), Image.Resampling.LANCZOS)
+            
+            # Créer une image carrée avec fond transparent
+            square_size = THUMBNAIL_SIZE
+            square_img = Image.new('RGBA', (square_size, square_size), (255, 255, 255, 0))
+            
+            # Centrer l'image redimensionnée
+            x_offset = (square_size - new_width) // 2
+            square_img.paste(img, (x_offset, 0))
+            
+            # Sauvegarder l'image
+            square_img.save(output_path, format='PNG')
+            return True
+            
+    except Exception as e:
+        logger.error(f"Erreur lors du redimensionnement de l'image : {str(e)}")
+        return False
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
@@ -30,6 +71,7 @@ if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
 # Configuration du dossier d'upload
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 logger.info(f"Dossier d'upload configuré : {UPLOAD_FOLDER}")
 
 # Configuration des options de connexion PostgreSQL
@@ -58,6 +100,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Initialisation de la base de données et du login manager
 db.init_app(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -78,9 +121,6 @@ def get_or_create_tags(tag_names):
                 db.session.add(tag)
             tags.append(tag)
     return tags
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Fonction pour migrer les fichiers
 def migrate_files():
@@ -308,7 +348,7 @@ def upload_document():
             flash('Aucun fichier sélectionné', 'error')
             return redirect(request.url)
         
-        if file and allowed_file(file.filename):
+        if file and allowed_file(file.filename, ALLOWED_EXTENSIONS):
             try:
                 # Sécurisation du nom de fichier
                 filename = secure_filename(file.filename)
@@ -319,6 +359,32 @@ def upload_document():
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 logger.info(f"Sauvegarde du fichier : {file_path}")
                 file.save(file_path)
+                
+                # Gestion de l'image
+                image_filename = None
+                if 'image' in request.files:
+                    image = request.files['image']
+                    if image.filename != '' and allowed_file(image.filename, ALLOWED_IMAGE_EXTENSIONS):
+                        # Sécurisation du nom de l'image
+                        image_filename = secure_filename(image.filename)
+                        image_filename = f"img_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{image_filename}"
+                        
+                        # Sauvegarde de l'image originale
+                        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+                        logger.info(f"Sauvegarde de l'image : {image_path}")
+                        image.save(image_path)
+                        
+                        # Création du thumbnail
+                        thumb_filename = f"thumb_{image_filename}"
+                        thumb_path = os.path.join(app.config['UPLOAD_FOLDER'], thumb_filename)
+                        if resize_image(image_path, thumb_path):
+                            # Si le redimensionnement a réussi, on utilise le thumbnail
+                            image_filename = thumb_filename
+                            # On peut supprimer l'image originale
+                            os.remove(image_path)
+                        else:
+                            # En cas d'erreur, on garde l'image originale
+                            logger.warning("Échec du redimensionnement, utilisation de l'image originale")
                 
                 # Création du document dans la base de données
                 title = request.form.get('title', filename)
@@ -333,6 +399,7 @@ def upload_document():
                 document = Document(
                     filename=filename,
                     original_filename=file.filename,
+                    image_filename=image_filename,
                     title=title,
                     author=author,
                     year=year if year and year.isdigit() else None,
@@ -389,6 +456,15 @@ def delete_document(document_id):
     
     flash('Document supprimé avec succès!', 'success')
     return redirect(url_for('documents'))
+
+# Route pour servir les images
+@app.route('/uploads/<filename>')
+def serve_image(filename):
+    try:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    except Exception as e:
+        logger.error(f"Erreur lors de l'accès à l'image {filename}: {str(e)}")
+        abort(404)
 
 @app.after_request
 def add_no_cache_headers(response):
