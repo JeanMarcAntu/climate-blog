@@ -41,5 +41,4 @@ with app.app_context():
         raise
 END
 
-# Lancement de l'application avec Gunicorn en utilisant le fichier de configuration
-exec gunicorn -c gunicorn.conf.py wsgi:app
+echo "Build terminé avec succès !"
