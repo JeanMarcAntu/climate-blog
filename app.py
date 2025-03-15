@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
 from models import db, Tag, Article, Document, User
+from urllib.parse import urlparse
 
 # Chargement des variables d'environnement
 load_dotenv()
@@ -18,8 +19,19 @@ app = Flask(__name__)
 
 # Configuration de la base de données
 database_url = os.environ.get('DATABASE_URL')
-if database_url and database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+if database_url:
+    # Conversion de postgres:// en postgresql:// si nécessaire
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
+    # Parse l'URL pour vérifier si c'est une URL PostgreSQL
+    parsed_url = urlparse(database_url)
+    if parsed_url.scheme in ['postgresql', 'postgres']:
+        # Ajoute les paramètres SSL pour Render
+        if '?' in database_url:
+            database_url += '&sslmode=require'
+        else:
+            database_url += '?sslmode=require'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///blog.db'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key_123')
