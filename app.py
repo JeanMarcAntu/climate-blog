@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response
-from datetime import datetime, timedelta
+import datetime
 import os
 from dotenv import load_dotenv
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
@@ -222,7 +222,7 @@ def upload_document():
             # Sécurisation du nom de fichier
             filename = secure_filename(file.filename)
             # Ajout d'un timestamp pour éviter les doublons
-            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+            filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
             
             # Sauvegarde du fichier
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
