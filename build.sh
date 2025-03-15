@@ -41,12 +41,5 @@ with app.app_context():
         raise
 END
 
-# Lancement de l'application avec Gunicorn
-# Configuration simple et robuste pour le démarrage
-exec gunicorn \
-    --workers=2 \
-    --log-level=info \
-    --access-logfile=- \
-    --error-logfile=- \
-    --bind=:10000 \
-    wsgi:app
+# Lancement de l'application avec Gunicorn en utilisant le fichier de configuration
+exec gunicorn -c gunicorn.conf.py wsgi:app

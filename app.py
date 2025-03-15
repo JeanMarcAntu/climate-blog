@@ -265,11 +265,16 @@ def delete_document(document_id):
 
 @app.after_request
 def add_no_cache_headers(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
+    """Ajoute les en-têtes pour désactiver le cache sur les réponses HTTP"""
+    if 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
 
 if __name__ == '__main__':
-    # Pour le développement local uniquement
-    app.run(debug=True)
+    # Configuration pour le développement local
+    app.run(
+        host='127.0.0.1',     # N'écoute que les connexions locales
+        port=8000,            # Utilisation du port 8000 pour éviter les conflits
+        debug=True,           # Mode debug pour voir les erreurs
+        use_reloader=True     # Recharge automatiquement si le code change
+    )
