@@ -199,13 +199,18 @@ def delete_article(article_id):
 @app.route('/documents')
 def documents():
     try:
+        # Récupérer le tag sélectionné depuis les paramètres de l'URL
         selected_tag = request.args.get('tag')
+        
         if selected_tag:
-            # Filtrer les documents par tag
-            tag = Tag.query.filter_by(name=selected_tag.lower()).first_or_404()
-            documents = tag.documents
+            # Si un tag est sélectionné, filtrer les documents par ce tag
+            tag = Tag.query.filter_by(name=selected_tag).first()
+            if tag:
+                documents = tag.documents
+            else:
+                documents = []
         else:
-            # Récupérer tous les documents
+            # Récupérer tous les documents si aucun tag n'est sélectionné
             documents = Document.query.order_by(Document.upload_date.desc()).all()
         
         # Récupérer tous les tags pour le filtre
@@ -216,8 +221,9 @@ def documents():
                              tags=tags, 
                              selected_tag=selected_tag)
     except Exception as e:
+        app.logger.error(f"Erreur lors de l'affichage des documents : {str(e)}")
         flash(str(e), 'error')
-        return render_template('documents.html', documents=[], tags=[])
+        return render_template('documents.html', documents=[], tags=[], selected_tag=None)
 
 # Route pour télécharger un document
 @app.route('/download/<int:document_id>')
