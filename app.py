@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
@@ -37,6 +37,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///blog.db'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key_123')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(minutes=60)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Création du dossier uploads s'il n'existe pas
 if not os.path.exists(UPLOAD_FOLDER):
