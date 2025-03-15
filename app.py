@@ -83,23 +83,31 @@ def article(article_id):
 # Route pour la page de connexion
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('home'))
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('home'))
+            
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            app.logger.info(f"Tentative de connexion pour l'utilisateur : {username}")
+            
+            user = User.query.filter_by(username=username).first()
+            
+            if user and user.check_password(password):
+                login_user(user)
+                app.logger.info(f"Connexion réussie pour l'utilisateur : {username}")
+                flash('Connexion réussie !', 'success')
+                next_page = request.args.get('next')
+                return redirect(next_page if next_page else url_for('home'))
+            else:
+                app.logger.warning(f"Échec de connexion pour l'utilisateur : {username}")
+                flash('Nom d\'utilisateur ou mot de passe incorrect', 'error')
         
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password):
-            login_user(user)
-            flash('Connexion réussie !', 'success')
-            next_page = request.args.get('next')
-            return redirect(next_page if next_page else url_for('home'))
-        else:
-            flash('Nom d\'utilisateur ou mot de passe incorrect', 'error')
-    
-    return render_template('login.html')
+        return render_template('login.html')
+    except Exception as e:
+        app.logger.error(f"Erreur lors de la connexion : {str(e)}")
+        raise
 
 # Route pour la déconnexion
 @app.route('/logout')
