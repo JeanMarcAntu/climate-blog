@@ -260,21 +260,16 @@ def download_document(document_id):
         app.logger.info(f"Tentative de téléchargement du document {document_id}")
         document = Document.query.get_or_404(document_id)
         
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-        app.logger.info(f"Chemin du fichier : {file_path}")
-        
-        if not os.path.exists(file_path):
-            app.logger.error(f"Fichier non trouvé : {file_path}")
+        if not document.file_content:
+            app.logger.error(f"Contenu du fichier non trouvé pour : {document.filename}")
             flash("Le fichier n'existe pas sur le serveur.", 'error')
             return redirect(url_for('documents'))
             
         try:
-            return send_from_directory(
-                app.config['UPLOAD_FOLDER'],
-                document.filename,
-                as_attachment=True,
-                download_name=document.original_filename
-            )
+            response = make_response(document.file_content)
+            response.headers['Content-Type'] = document.file_type or 'application/octet-stream'
+            response.headers['Content-Disposition'] = f'attachment; filename="{document.original_filename}"'
+            return response
         except Exception as e:
             app.logger.error(f"Erreur lors de l'envoi du fichier : {str(e)}")
             flash("Erreur lors du téléchargement du fichier.", 'error')
@@ -300,44 +295,49 @@ def upload_document():
             return redirect(request.url)
         
         if file and allowed_file(file.filename):
-            # Sécurisation du nom de fichier
-            filename = secure_filename(file.filename)
-            # Ajout d'un timestamp pour éviter les doublons
-            filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+            try:
+                # Lecture du contenu du fichier
+                file_content = file.read()
+                
+                # Création du document dans la base de données
+                title = request.form.get('title', file.filename)
+                author = request.form.get('author', '')
+                year = request.form.get('year', None)
+                description = request.form.get('description', '')
+                
+                # Gestion des tags
+                tag_names = request.form.get('tags', '').split(',')
+                tags = get_or_create_tags(tag_names)
+                
+                # Création du document avec le contenu du fichier
+                document = Document(
+                    filename=file.filename,
+                    original_filename=file.filename,
+                    title=title,
+                    author=author,
+                    year=year,
+                    description=description,
+                    file_content=file_content,
+                    file_type=file.content_type
+                )
+                
+                # Ajout des tags
+                document.tags = tags
+                
+                db.session.add(document)
+                db.session.commit()
+                
+                flash('Document uploadé avec succès !', 'success')
+                return redirect(url_for('documents'))
+            except Exception as e:
+                app.logger.error(f"Erreur lors de l'upload : {str(e)}")
+                flash("Une erreur s'est produite lors de l'upload.", 'error')
+                return redirect(url_for('documents'))
+        else:
+            flash('Type de fichier non autorisé', 'error')
+            return redirect(request.url)
             
-            # Sauvegarde du fichier
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            
-            # Création du document dans la base de données
-            title = request.form.get('title', filename)
-            author = request.form.get('author', '')
-            year = request.form.get('year', None)
-            description = request.form.get('description', '')
-            
-            # Gestion des tags
-            tag_names = request.form.get('tags', '').split(',')
-            tags = get_or_create_tags(tag_names)
-            
-            document = Document(
-                filename=filename,
-                original_filename=file.filename,
-                title=title,
-                author=author,
-                year=year if year and year.isdigit() else None,
-                description=description,
-                tags=tags
-            )
-            
-            db.session.add(document)
-            db.session.commit()
-            
-            flash('Document uploadé avec succès!', 'success')
-            return redirect(url_for('documents'))
-            
-        flash('Type de fichier non autorisé', 'error')
-        return redirect(request.url)
-        
-    return render_template('upload_document.html')
+    return render_template('upload.html')
 
 # Route pour éditer un document
 @app.route('/admin/edit/document/<int:document_id>', methods=['GET', 'POST'])
@@ -365,11 +365,6 @@ def edit_document(document_id):
 @login_required
 def delete_document(document_id):
     document = Document.query.get_or_404(document_id)
-    
-    # Suppression du fichier physique
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
     
     # Suppression de l'entrée dans la base de données
     db.session.delete(document)

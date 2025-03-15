@@ -64,4 +64,36 @@ with app.app_context():
         raise
 END
 
+# Initialisation de la base de données et migration des fichiers
+python << END
+from app import app, db
+from models import Document
+import os
+
+print("Démarrage de la migration...")
+
+with app.app_context():
+    # Création des tables si elles n'existent pas
+    db.create_all()
+    
+    # Migration des fichiers existants
+    try:
+        documents = Document.query.all()
+        for document in documents:
+            if document.file_content is None:  # Si le fichier n'est pas encore en base
+                old_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', document.filename)
+                if os.path.exists(old_path):
+                    with open(old_path, 'rb') as f:
+                        document.file_content = f.read()
+                        document.file_type = 'application/pdf'  # Par défaut pour les anciens fichiers
+                        print(f"Migration du fichier : {document.filename}")
+        db.session.commit()
+        print("Migration terminée avec succès !")
+    except Exception as e:
+        print(f"Erreur lors de la migration : {str(e)}")
+        db.session.rollback()
+        raise
+
+END
+
 echo "Build terminé avec succès !"

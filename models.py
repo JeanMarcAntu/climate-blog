@@ -39,6 +39,8 @@ class Document(db.Model):
     year = db.Column(db.Integer, nullable=True)
     description = db.Column(db.Text)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    file_content = db.Column(db.LargeBinary, nullable=True)  # Pour stocker le contenu du fichier
+    file_type = db.Column(db.String(50), nullable=True)      # Pour stocker le type MIME du fichier
     tags = db.relationship('Tag', secondary=document_tags, lazy='subquery',
             backref=db.backref('documents', lazy=True))
     
