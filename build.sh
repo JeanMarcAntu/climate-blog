@@ -12,9 +12,9 @@ echo "Dossier uploads vérifié"
 pip install -r requirements.txt
 echo "Dépendances installées"
 
-# Création du dossier d'upload
-mkdir -p /opt/render/project/src/uploads
-chmod 777 /opt/render/project/src/uploads
+# Création du dossier d'upload dans le dossier de l'utilisateur
+mkdir -p $HOME/uploads
+chmod 777 $HOME/uploads
 
 # Initialisation de la base de données uniquement si nécessaire
 python << END

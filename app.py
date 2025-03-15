@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 load_dotenv()
 
 # Configuration des uploads
-UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/opt/render/project/src/uploads')
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.expanduser('~/uploads'))
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'}
 
 # Initialisation de l'application Flask
